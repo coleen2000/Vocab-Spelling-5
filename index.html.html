@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Battle Game</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@700&display=swap" rel="stylesheet">
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Quicksand', sans-serif;
+    overflow: hidden;
+}
+
+/* CLOUDS */
+.cloud {
+    position: absolute;
+    top: 50px;
+    width: 120px;
+    height: 60px;
+    background: white;
+    border-radius: 50px;
+    opacity: 0.9;
+    animation: moveClouds 30s linear infinite;
+}
+
+@keyframes moveClouds {
+    from { transform: translateX(-200px); }
+    to { transform: translateX(120vw); }
+}
+
+/* LAYOUT */
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+.side {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px;
+    background: linear-gradient(#5c94fc 70%, #8B4513 70%);
+    transition: 0.2s;
+}
+
+.boys { box-shadow: inset 0 0 0 1000px rgba(0,120,255,0.3); }
+.girls { box-shadow: inset 0 0 0 1000px rgba(255,0,80,0.3); }
+
+/* HEADER */
+.header {
+    font-size: 100px;
+}
+
+/* TIMER */
+.timer {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 120px;
+    color: yellow;
+    text-align: center;
+}
+
+/* SCORE */
+.scoreboard {
+    position: absolute;
+    top: 140px;
+    width: 100%;
+    text-align: center;
+    font-size: 30px;
+}
+
+/* WORD */
+.word {
+    font-size: 120px;
+    letter-spacing: 10px;
+    min-width: 360px;
+    padding: 30px 60px;
+    background: white;
+    border: 6px solid black;
+    border-radius: 20px;
+    text-align: center;
+}
+
+/* OPTION */
+.options {
+    display: flex;
+    gap: 25px;
+}
+
+.option {
+    font-size: 60px;
+    padding: 20px;
+    cursor: pointer;
+    border: 5px solid #5a2e0c;
+
+    background:
+        repeating-linear-gradient(0deg,#b5521f,#b5521f 20px,#a0471a 20px,#a0471a 40px),
+        repeating-linear-gradient(90deg,#b5521f,#b5521f 40px,#8f3e14 40px,#8f3e14 80px);
+
+    color: white;
+    text-shadow: 2px 2px black;
+
+    animation: bounce 1.5s infinite;
+}
+
+@keyframes bounce {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-60px); }
+    100% { transform: translateY(0); }
+}
+
+/* FLASH */
+.flash-green {
+    animation: greenFlash 0.4s;
+}
+
+@keyframes greenFlash {
+    0% { background-color: rgba(0,255,0,0); }
+    50% { background-color: rgba(0,255,0,0.5); }
+    100% { background-color: rgba(0,255,0,0); }
+}
+
+.flash-red {
+    animation: redFlash 0.4s;
+}
+
+@keyframes redFlash {
+    0% { background-color: rgba(255,0,0,0); }
+    50% { background-color: rgba(255,0,0,0.5); }
+    100% { background-color: rgba(255,0,0,0); }
+}
+
+/* POP */
+.popText {
+    position: absolute;
+    font-size: 80px;
+    font-weight: bold;
+    animation: pop 0.6s ease-out;
+    pointer-events: none;
+}
+
+@keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.5); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+}
+
+/* RESULT */
+.result {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    color: white;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-size: 40px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="timer outline">
+⏱ <span id="time">180</span>s
+</div>
+
+<div class="scoreboard outline">
+BOYS: <span id="boysScore">0</span> | GIRLS: <span id="girlsScore">0</span>
+</div>
+
+<div class="container">
+
+<div class="side boys">
+<div class="header outline">BOYS</div>
+<div class="word" id="boysWord"></div>
+<div class="options" id="boysOptions"></div>
+</div>
+
+<div class="side girls">
+<div class="header outline">GIRLS</div>
+<div class="word" id="girlsWord"></div>
+<div class="options" id="girlsOptions"></div>
+</div>
+
+</div>
+
+<div class="result" id="resultScreen">
+<div id="winnerText"></div>
+<button onclick="restartGame()">PLAY AGAIN</button>
+</div>
+
+<script>
+const words = ["nice","fine","beautiful","colorful","unique","clothing","culture","Taiwan","country"];
+
+let boysScore = 0;
+let girlsScore = 0;
+let timeLeft = 180;
+let timer;
+
+/* QUESTION */
+function createQuestion(){
+let w = words[Math.floor(Math.random()*words.length)];
+let i = Math.floor(Math.random()*w.length);
+let correct = w[i];
+
+let display = w.split("");
+display[i] = "<span class='blank'>_</span>";
+display = display.join("");
+
+let opts = [correct];
+let letters = w.split("").filter(l => l !== correct);
+
+while(opts.length < 3){
+let pick = letters[Math.floor(Math.random()*letters.length)];
+if(!opts.includes(pick)) opts.push(pick);
+}
+
+opts.sort(()=>Math.random()-0.5);
+
+return {display, correct, opts};
+}
+
+/* POP */
+function pop(side,text,color){
+let p=document.createElement("div");
+p.className="popText";
+p.innerText=text;
+p.style.color=color;
+
+let rect=document.querySelector("."+side).getBoundingClientRect();
+
+p.style.left=rect.left+rect.width/2+"px";
+p.style.top=rect.top+rect.height/2+"px";
+
+document.body.appendChild(p);
+setTimeout(()=>p.remove(),600);
+}
+
+/* LOAD */
+function loadSide(side){
+let q=createQuestion();
+
+document.getElementById(side+"Word").innerHTML=q.display;
+
+let box=document.getElementById(side+"Options");
+box.innerHTML="";
+
+q.opts.forEach(l=>{
+let d=document.createElement("div");
+d.className="option outline";
+d.innerText=l;
+
+d.onclick=()=>{
+
+let sideEl=document.querySelector("."+side);
+
+if(l===q.correct){
+
+// ✅ CORRECT
+if(side==="boys"){
+boysScore++;
+document.getElementById("boysScore").innerText=boysScore;
+}else{
+girlsScore++;
+document.getElementById("girlsScore").innerText=girlsScore;
+}
+
+sideEl.classList.add("flash-green");
+pop(side,"+1","lime");
+
+setTimeout(()=>{
+sideEl.classList.remove("flash-green");
+loadSide(side);
+},300);
+
+}else{
+
+// ❌ WRONG (-1 FIXED)
+if(side==="boys"){
+boysScore--;
+if(boysScore<0) boysScore=0;
+document.getElementById("boysScore").innerText=boysScore;
+}else{
+girlsScore--;
+if(girlsScore<0) girlsScore=0;
+document.getElementById("girlsScore").innerText=girlsScore;
+}
+
+sideEl.classList.add("flash-red");
+pop(side,"-1","red");
+
+setTimeout(()=>{
+sideEl.classList.remove("flash-red");
+},300);
+}
+
+};
+
+box.appendChild(d);
+});
+}
+
+/* TIMER */
+function startTimer(){
+timer=setInterval(()=>{
+timeLeft--;
+document.getElementById("time").innerText=timeLeft;
+
+if(timeLeft<=0){
+clearInterval(timer);
+endGame();
+}
+},1000);
+}
+
+/* END */
+function endGame(){
+let win="TIE 🤝";
+if(boysScore>girlsScore) win="BOYS WIN 🔵";
+if(girlsScore>boysScore) win="GIRLS WIN 🔴";
+
+document.getElementById("winnerText").innerText=
+win+"\n\n"+boysScore+" - "+girlsScore;
+
+document.getElementById("resultScreen").style.display="flex";
+}
+
+/* RESTART */
+function restartGame(){
+boysScore=0;
+girlsScore=0;
+timeLeft=180;
+
+document.getElementById("boysScore").innerText=0;
+document.getElementById("girlsScore").innerText=0;
+document.getElementById("time").innerText=180;
+document.getElementById("resultScreen").style.display="none";
+
+loadSide("boys");
+loadSide("girls");
+startTimer();
+}
+
+/* START */
+loadSide("boys");
+loadSide("girls");
+startTimer();
+</script>
+
+</body>
+</html>
